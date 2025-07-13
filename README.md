@@ -18,59 +18,102 @@ Next, take a look at the `hardhat.config.js` file. Specifically this line:
 ```javascript
 module.exports = {
   solidity: "0.8.17",
-  defaultNetwork: 'localhost' // <-- this one!
+  defaultNetwork: "localhost", // <-- this one!
 };
 ```
 
-The `defaultNetwork` is going to set our scripts to run, by default, against our local node. 
+The `defaultNetwork` is going to set our scripts to run, by default, against our local node.
 
-Let's go ahead and run our local node. You can do so by running `npx hardhat node`. This will spin up a local, persistent hardhat blockchain on your port 8545. 
+Let's go ahead and run our local node. You can do so by running `npx hardhat node`. This will spin up a local, persistent hardhat blockchain on your port 8545.
 
-## 3. Deploy a Contract
+## 3. Deploy and Win Games (Recommended Approach)
 
-Its time to deploy a contract! We can use the deploy script to do this. Open up a second terminal and **keep your hardhat node running**. In this new terminal run `npx hardhat run scripts/deploy.js`. If you do this successfully you should see two things in the two terminals:
+The easiest way to play the games is using our combined `deploy-and-win.js` script that handles both deployment and winning in one go.
 
-- **Your Script Terminal** - A message saying "Game1 deployed to address: 0x..." (copy the contract address)
-- **Hardhat Node Terminal** - A contract deployed to your local hardhat blockchain (notice all the JSON RPC methods being logged!)
+### How to use deploy-and-win.js:
 
-How is this working? To understand, take a look at your `scripts/deploy.js` script:
+1. **Change the contract name** in `scripts/deploy-and-win.js` to the game you want to play
+2. **Run the script** with `npx hardhat run scripts/deploy-and-win.js --network localhost`
 
 ```javascript
-const contractName = "Game1"; // <-- use the contract name here
+const contractName = "Game1"; // <-- Change this to Game1, Game2, Game3, Game4, or Game5
+```
+
+The script will:
+
+- Deploy the contract
+- Show the deployed address
+- Execute the required steps to win the game
+- Show the Winner event details
+
+### Game-specific Requirements:
+
+**Game1**: Simple win, just calls `win()`
+
+```javascript
+const tx = await game.win();
+```
+
+**Game2**: Requires setting x and y values that sum to 50
+
+```javascript
+await game.setX(20);
+await game.setY(30);
+const tx = await game.win();
+```
+
+**Game3**: Requires calling win with parameter 45 (45 + 210 = 255)
+
+```javascript
+const tx = await game.win(45);
+```
+
+**Game4**: Requires calling win with parameter 56 (uses uint8 overflow: 210 + 56 = 266, 266 % 256 = 10)
+
+```javascript
+const tx = await game.win(56);
+```
+
+**Game5**: Requires getting allowance and minting tokens to have balance >= 10000
+
+```javascript
+await game.giveMeAllowance(10000);
+await game.mint(10000);
+const tx = await game.win();
+```
+
+## 4. Alternative: Traditional Deploy + Win Method
+
+If you prefer the traditional approach, you can still use separate scripts:
+
+### Deploy a Contract
+
+Run `npx hardhat run scripts/deploy.js` to deploy. **Note:** The original deploy script had an issue with ethers.js v6. The address property changed from `game.address` to `game.target`.
+
+Fixed deploy script:
+
+```javascript
+const contractName = "Game1";
 
 async function main() {
-  const Game = await hre.ethers.getContractFactory(contractName); // <-- hardhat compiles and grabs the contract abi/bytecode using the name
-  const game = await Game.deploy(); // <-- the transaction to deploy your contract to the blockchain
-  console.log(`${contractName} deployed to address: ${game.address}`); // <-- our log telling us the address!
+  const Game = await hre.ethers.getContractFactory(contractName);
+  const game = await Game.deploy();
+  await game.waitForDeployment();
+  console.log(`${contractName} deployed to address: ${game.target}`); // <-- use game.target instead of game.address
 }
 ```
 
-We've deployed `Game1`, now its time to win!
+### Win the Game
 
-## 4. Win the Game
-
-Use the address you deployed your contract from step 3. Paste it into the `scripts/win.js` file where the comments direct you to. 
-
-You can keep the contract name as `Game1` for now. When you attempt `Game2` later on, you'll need to change this! Hardhat uses this contract name to go fetch the ABI for the contract from the `artifacts` folder.
-
-Now run `npx hardhat run scripts/win.js`, this will go ahead and call `win` on your `Game1` contract. If you're successful you should see a transaction receipt with a `Winner` event inside of the `events` array. 
-
-## 5. Play Game2 through Game5
-
-Try each game! See if you can emit the Winner event on each one. Remember to:
-
-1. Change the `contractName` in `scripts/deploy.js`
-2. Deploy each new game to your local hardhat environment 
-3. Copy the address into the `scripts/win.js`
-4. Change the `contractName` in `scripts/win.js`
-5. Modify the win script to succesfully complete the challenge. You may need to run multiple transactions in order to win each game!
+Use the deployed address in `scripts/win.js` and modify it according to each game's requirements as shown above.
 
 # Troubleshooting
 
 ## Common Errors
 
-1. **Gas Estimation Error** - if you see a gas estimation error, this means that the blockchain node was unable to estimate the gas. The reason for this is often because the transaction reverted! 
+1. **Gas Estimation Error** - if you see a gas estimation error, this means that the blockchain node was unable to estimate the gas. The reason for this is often because the transaction reverted!
 2. **`game.[method]` is not a function** - this typically happens because you forgot to change the contract name. More technically, there's function that you think should exist on the contract, but hardhat is not able to call it because the ABI it fetched from the `artifacts` folder does not have that method defined.
+3. **"deployed to address: undefined"** - This happens with newer versions of ethers.js (v6). Use `game.target` instead of `game.address` and add `await game.waitForDeployment()` before accessing the address.
 
 ## Use Hardhat Console Log
 
@@ -92,3 +135,20 @@ contract Game1 {
 ```
 
 Now when you call `win` on `Game1` you will see `22` show up in your local hardhat node. This will happen even if the transaction reverts!
+
+## Package Updates
+
+To keep your packages up to date, you can use:
+
+```bash
+# Check outdated packages
+npm outdated
+
+# Update within version ranges
+npm update
+
+# Or use npm-check-updates for major updates
+npm install -g npm-check-updates
+ncu -u
+npm install
+```
