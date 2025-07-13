@@ -1,4 +1,4 @@
-const contractName = "Game2";
+const contractName = "Game3";
 
 async function main() {
   // Deploy
@@ -8,13 +8,9 @@ async function main() {
 
   console.log(`${contractName} deployed to address: ${game.target}`);
 
-  // Game2 için: x ve y değerlerini ayarla
-  console.log("Setting x = 20, y = 30...");
-  await game.setX(20);
-  await game.setY(30);
-
-  // Win
-  const tx = await game.win();
+  // Game3 için: x = 45 (çünkü 45 + 210 = 255)
+  console.log("Calling win(45)...");
+  const tx = await game.win(45);
   const receipt = await tx.wait();
 
   console.log("Game won!");
