@@ -1,4 +1,4 @@
-const contractName = "Game4";
+const contractName = "Game5";
 
 async function main() {
   // Deploy
@@ -8,9 +8,15 @@ async function main() {
 
   console.log(`${contractName} deployed to address: ${game.target}`);
 
-  // Game4 için: x = 56 (çünkü 210 + 56 = 266, 266 % 256 = 10)
-  console.log("Calling win(56)...");
-  const tx = await game.win(56);
+  // Game5 için: balance >= 10000 olmalı
+  console.log("Getting allowance of 10000...");
+  await game.giveMeAllowance(10000);
+
+  console.log("Minting 10000 tokens...");
+  await game.mint(10000);
+
+  console.log("Calling win()...");
+  const tx = await game.win();
   const receipt = await tx.wait();
 
   console.log("Game won!");
